@@ -1,0 +1,100 @@
+import mongoose from 'mongoose';
+
+const userSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  },
+  phone: {
+    type: String,
+    sparse: true,
+  },
+  fullName: {
+    type: String,
+    required: true,
+  },
+  username: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  profileImage: {
+    type: String,
+  },
+  password: {
+    type: String,
+    select: false, // Don't return password in queries by default
+  },
+  role: {
+    type: String,
+    enum: ['user', 'creator'],
+    default: 'user',
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  isCreator: {
+    type: Boolean,
+    default: false,
+  },
+  pointsBalance: {
+    type: Number,
+    default: 100, // Welcome bonus
+  },
+  memberSince: {
+    type: Date,
+    default: Date.now,
+  },
+  lastActive: {
+    type: Date,
+    default: Date.now,
+  },
+  totalGenerations: {
+    type: Number,
+    default: 0,
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'banned'],
+    default: 'active',
+  },
+  fcmToken: {
+    type: String,
+  },
+  referralCode: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+}, {
+  timestamps: true,
+});
+
+// Additional indexes
+// Note: userId, email, firebaseUid, username, and referralCode already have indexes via unique: true
+// Only add indexes for fields that don't have unique: true
+userSchema.index({ role: 1 });
+userSchema.index({ status: 1 });
+userSchema.index({ createdAt: -1 }); // For sorting by creation date
+userSchema.index({ lastActive: -1 }); // For sorting by last active
+
+export default mongoose.model('User', userSchema);
+
