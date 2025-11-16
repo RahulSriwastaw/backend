@@ -26,7 +26,18 @@ connectDB().catch((err) => {
   console.error('   3. Internet connection');
 });
 
-app.use(cors());
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',')
+    : process.env.NODE_ENV === 'production' 
+      ? [] // In production, require CORS_ORIGIN to be set
+      : true, // In development, allow all origins
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
