@@ -14,7 +14,7 @@ import adminRoutes from './routes/admin.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.BACKEND_PORT || 4000;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 4000;
 
 // Connect to MongoDB (non-blocking - server will start even if MongoDB fails)
 connectDB().catch((err) => {
