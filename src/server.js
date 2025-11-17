@@ -35,30 +35,23 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Root route for Railway health check (responds immediately)
+// Root route for Railway health check (responds immediately - NO async operations)
 app.get('/', (req, res) => {
-  res.send('Backend is running successfully!');
+  res.status(200).send('Backend is running successfully!');
 });
 
-// Health check endpoint (fast response for Railway)
+// Health check endpoint (fast response for Railway - NO async operations)
 app.get('/health', (req, res) => {
-  try {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-    res.json({ 
-      status: 'ok', 
-      message: 'Backend is running', 
-      database: dbStatus,
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage()
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'error', 
-      message: 'Health check failed',
-      error: error.message 
-    });
-  }
+  // Respond immediately without any async operations
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Backend is running', 
+    database: dbStatus,
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    port: PORT
+  });
 });
 
 // Connection test endpoint
@@ -120,6 +113,15 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
+// Simple API test route (responds immediately)
+app.get('/api', (req, res) => {
+  res.status(200).json({ 
+    message: 'API is working', 
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API Routes - Mount all routes with /api prefix (with individual error handling)
 const mountRoute = (path, route, name) => {
   try {
@@ -138,20 +140,24 @@ const mountRoute = (path, route, name) => {
   }
 };
 
-try {
-  mountRoute('/api/auth', authRoutes, 'authRoutes');
-  mountRoute('/api/payment', paymentRoutes, 'paymentRoutes');
-  mountRoute('/api/templates', templateRoutes, 'templateRoutes');
-  mountRoute('/api/generation', generationRoutes, 'generationRoutes');
-  mountRoute('/api/wallet', walletRoutes, 'walletRoutes');
-  mountRoute('/api/creator', creatorRoutes, 'creatorRoutes');
-  mountRoute('/api/admin', adminRoutes, 'adminRoutes');
-  console.log('✅ Route mounting completed');
-} catch (error) {
-  console.error('❌ Error during route mounting:', error.message);
-  console.error('Stack:', error.stack);
-  // Server will still start, but some routes may not work
-}
+// Mount routes AFTER server starts (non-blocking)
+setImmediate(() => {
+  try {
+    console.log('📦 Starting route mounting...');
+    mountRoute('/api/auth', authRoutes, 'authRoutes');
+    mountRoute('/api/payment', paymentRoutes, 'paymentRoutes');
+    mountRoute('/api/templates', templateRoutes, 'templateRoutes');
+    mountRoute('/api/generation', generationRoutes, 'generationRoutes');
+    mountRoute('/api/wallet', walletRoutes, 'walletRoutes');
+    mountRoute('/api/creator', creatorRoutes, 'creatorRoutes');
+    mountRoute('/api/admin', adminRoutes, 'adminRoutes');
+    console.log('✅ Route mounting completed');
+  } catch (error) {
+    console.error('❌ Error during route mounting:', error.message);
+    console.error('Stack:', error.stack);
+    // Server will still start, but some routes may not work
+  }
+});
 
 // 404 handler
 app.use((req, res) => {
@@ -202,6 +208,7 @@ console.log(`🚀 Starting server on port ${PORT}...`);
 console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🌐 PORT from env: ${process.env.PORT || 'not set (using default 8080)'}`);
 
+// Start server BEFORE mounting routes to ensure it responds immediately
 const server = app.listen(PORT, '0.0.0.0', () => {
   const address = server.address();
   console.log(`✅ Server Running successfully!`);
@@ -210,12 +217,25 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✅ Health check: http://0.0.0.0:${PORT}/health`);
   console.log(`✅ Root endpoint: http://0.0.0.0:${PORT}/`);
+  console.log(`✅ API endpoint: http://0.0.0.0:${PORT}/api`);
   console.log(`✅ Server is ready to accept connections`);
+  
+  // Test that server is actually listening
+  if (server.listening) {
+    console.log(`✅ Server is listening and ready`);
+  } else {
+    console.error(`❌ Server is NOT listening!`);
+  }
 });
 
 // Ensure server stays alive
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
+
+// Log when server receives requests
+server.on('request', (req, res, next) => {
+  console.log(`📥 Request: ${req.method} ${req.path}`);
+});
 
 // Keep server alive - handle errors gracefully
 server.on('error', (error) => {
