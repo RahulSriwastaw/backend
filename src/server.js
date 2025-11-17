@@ -39,7 +39,12 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Health check
+// Root route for Railway health check (responds immediately)
+app.get('/', (req, res) => {
+  res.send('Backend is running successfully!');
+});
+
+// Health check endpoint (fast response for Railway)
 app.get('/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   res.json({ 
@@ -84,10 +89,6 @@ app.get('/api/test-connections', async (req, res) => {
   }
 });
 
-// Root route for Railway health check
-app.get('/', (req, res) => {
-  res.send('Backend is running successfully!');
-});
 
 // Debug: List all registered routes (development only)
 if (process.env.NODE_ENV === 'development') {
