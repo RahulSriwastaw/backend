@@ -18,9 +18,10 @@ if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI environment variable is not set!');
   console.error('💡 Please set MONGODB_URI in Railway Dashboard → Variables');
   console.error('💡 Format: mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority');
-  // Use fallback for development
-  MONGODB_URI = 'mongodb+srv://rupantranai_db_user:auC2C5rXl4nNleWd@cluster0.skr2l3f.mongodb.net/rupantar_ai?retryWrites=true&w=majority&appName=Cluster0';
+  // Use fallback for development (DO NOT use in production - set MONGODB_URI in Railway)
+  MONGODB_URI = 'mongodb+srv://rupantranai_db_user:auC2C5rXl4nNleWd@cluster0.skr2l3f.mongodb.net/rupantar_ai?retryWrites=true&w=majority';
   console.warn('⚠️  Using fallback connection string (may not work in production)');
+  console.warn('⚠️  Set MONGODB_URI in Railway Dashboard → Variables');
 } else {
   // Trim whitespace
   MONGODB_URI = MONGODB_URI.trim();
