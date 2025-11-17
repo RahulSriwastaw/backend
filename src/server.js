@@ -12,7 +12,7 @@ import mongoose from 'mongoose';
 
 dotenv.config();
 
-// Import all modules - if any fail, server will crash during import (which is fine - we want to know)
+// Import all modules
 import connectDB from './config/database.js';
 import paymentRoutes from './routes/payment.js';
 import templateRoutes from './routes/templates.js';
@@ -25,6 +25,10 @@ import adminRoutes from './routes/admin.js';
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// ============================================
+// MIDDLEWARE (Order matters!)
+// ============================================
+
 // CORS - Allow all origins for development and Vercel deployments
 app.use(cors({ 
   origin: true, 
@@ -32,17 +36,27 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Body parsers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Root route for Railway health check (responds immediately - NO async operations)
+// Request logging middleware (BEFORE routes)
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
+
+// ============================================
+// ROUTES (Mount BEFORE server starts)
+// ============================================
+
+// Root route for Railway health check (responds immediately)
 app.get('/', (req, res) => {
   res.status(200).send('Backend is running successfully!');
 });
 
-// Health check endpoint (fast response for Railway - NO async operations)
+// Health check endpoint (fast response for Railway)
 app.get('/health', (req, res) => {
-  // Respond immediately without any async operations
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
   res.status(200).json({ 
     status: 'ok', 
@@ -51,6 +65,15 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     port: PORT
+  });
+});
+
+// Simple API test route (responds immediately)
+app.get('/api', (req, res) => {
+  res.status(200).json({ 
+    message: 'API is working', 
+    status: 'ok',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -88,6 +111,22 @@ app.get('/api/test-connections', async (req, res) => {
   }
 });
 
+// API Routes - Mount all routes with /api prefix
+try {
+  app.use('/api/auth', authRoutes);
+  app.use('/api/payment', paymentRoutes);
+  app.use('/api/templates', templateRoutes);
+  app.use('/api/generation', generationRoutes);
+  app.use('/api/wallet', walletRoutes);
+  app.use('/api/creator', creatorRoutes);
+  app.use('/api/admin', adminRoutes);
+  console.log('✅ All API routes mounted successfully');
+} catch (error) {
+  console.error('❌ Error mounting routes:', error.message);
+  console.error('Stack:', error.stack);
+  // Server will still start, but some routes may not work
+}
+
 // Debug: List all registered routes (development only)
 if (process.env.NODE_ENV === 'development') {
   app.get('/api/routes', (req, res) => {
@@ -113,58 +152,16 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// Simple API test route (responds immediately)
-app.get('/api', (req, res) => {
-  res.status(200).json({ 
-    message: 'API is working', 
-    status: 'ok',
-    timestamp: new Date().toISOString()
-  });
-});
+// ============================================
+// ERROR HANDLING
+// ============================================
 
-// API Routes - Mount all routes with /api prefix (with individual error handling)
-const mountRoute = (path, route, name) => {
-  try {
-    if (route) {
-      app.use(path, route);
-      console.log(`✅ Route mounted: ${path}`);
-      return true;
-    } else {
-      console.warn(`⚠️  Route not available: ${name}`);
-      return false;
-    }
-  } catch (error) {
-    console.error(`❌ Error mounting route ${path}:`, error.message);
-    console.error('Stack:', error.stack);
-    return false;
-  }
-};
-
-// Mount routes AFTER server starts (non-blocking)
-setImmediate(() => {
-  try {
-    console.log('📦 Starting route mounting...');
-    mountRoute('/api/auth', authRoutes, 'authRoutes');
-    mountRoute('/api/payment', paymentRoutes, 'paymentRoutes');
-    mountRoute('/api/templates', templateRoutes, 'templateRoutes');
-    mountRoute('/api/generation', generationRoutes, 'generationRoutes');
-    mountRoute('/api/wallet', walletRoutes, 'walletRoutes');
-    mountRoute('/api/creator', creatorRoutes, 'creatorRoutes');
-    mountRoute('/api/admin', adminRoutes, 'adminRoutes');
-    console.log('✅ Route mounting completed');
-  } catch (error) {
-    console.error('❌ Error during route mounting:', error.message);
-    console.error('Stack:', error.stack);
-    // Server will still start, but some routes may not work
-  }
-});
-
-// 404 handler
+// 404 handler (must be after all routes)
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found', path: req.path });
 });
 
-// Error handling middleware
+// Error handling middleware (must be last)
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   const statusCode = err.statusCode || 500;
@@ -174,21 +171,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Connect to MongoDB (non-blocking - server will start even if MongoDB fails)
-if (connectDB) {
-  connectDB().catch((err) => {
-    console.error('⚠️  Failed to connect to MongoDB:', err.message);
-    console.error('⚠️  Server will continue but database operations may fail.');
-    console.error('⚠️  Please check:');
-    console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
-    console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
-    console.error('   3. Internet connection');
-  });
-} else {
-  console.warn('⚠️  Database connection module not loaded - MongoDB operations will fail');
-}
+// ============================================
+// PROCESS ERROR HANDLERS
+// ============================================
 
-// Process error handlers - prevent server crashes
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
   console.error('Stack:', error.stack);
@@ -203,12 +189,28 @@ process.on('unhandledRejection', (reason, promise) => {
   console.warn('⚠️  Server will continue running despite unhandled rejection');
 });
 
-// Start server - ensure it stays alive
+// ============================================
+// DATABASE CONNECTION (Non-blocking)
+// ============================================
+
+// Connect to MongoDB (non-blocking - server will start even if MongoDB fails)
+connectDB().catch((err) => {
+  console.error('⚠️  Failed to connect to MongoDB:', err.message);
+  console.error('⚠️  Server will continue but database operations may fail.');
+  console.error('⚠️  Please check:');
+  console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
+  console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
+  console.error('   3. Internet connection');
+});
+
+// ============================================
+// START SERVER
+// ============================================
+
 console.log(`🚀 Starting server on port ${PORT}...`);
 console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🌐 PORT from env: ${process.env.PORT || 'not set (using default 8080)'}`);
 
-// Start server BEFORE mounting routes to ensure it responds immediately
 const server = app.listen(PORT, '0.0.0.0', () => {
   const address = server.address();
   console.log(`✅ Server Running successfully!`);
@@ -220,7 +222,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ API endpoint: http://0.0.0.0:${PORT}/api`);
   console.log(`✅ Server is ready to accept connections`);
   
-  // Test that server is actually listening
+  // Verify server is listening
   if (server.listening) {
     console.log(`✅ Server is listening and ready`);
   } else {
@@ -232,13 +234,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
-// Request logging middleware (moved before routes)
-app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.path} - ${new Date().toISOString()}`);
-  next();
-});
-
-// Keep server alive - handle errors gracefully
+// Server error handler
 server.on('error', (error) => {
   console.error('❌ Server error:', error);
   if (error.code === 'EADDRINUSE') {

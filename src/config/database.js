@@ -10,10 +10,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Use MONGODB_URI from environment, fallback to default
+// Get MONGODB_URI from environment
 let MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 
-// Validate connection string format
+// Validate and fix connection string format
 if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI environment variable is not set!');
   console.error('💡 Please set MONGODB_URI in Railway Dashboard → Variables');
@@ -26,14 +26,19 @@ if (!MONGODB_URI) {
   // Trim whitespace
   MONGODB_URI = MONGODB_URI.trim();
   
-  // Validate format (don't throw - just warn, let connection attempt fail gracefully)
+  // Validate format
   if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
     console.error('❌ Invalid MONGODB_URI format!');
     console.error('💡 Connection string must start with "mongodb://" or "mongodb+srv://"');
-    console.error('💡 Current value:', MONGODB_URI.substring(0, 50) + '...');
+    console.error('💡 Current value (first 50 chars):', MONGODB_URI.substring(0, 50));
     console.error('💡 Please check Railway Dashboard → Variables → MONGODB_URI');
     console.warn('⚠️  Server will start but MongoDB connection will fail');
     // Don't throw - let server start, connection will fail gracefully
+  } else {
+    // Verify database name is included
+    if (!MONGODB_URI.includes('/rupantar_ai') && !MONGODB_URI.includes('/?') && !MONGODB_URI.includes('?retryWrites')) {
+      console.warn('⚠️  MONGODB_URI may be missing database name. Expected format includes /rupantar_ai');
+    }
   }
 }
 
