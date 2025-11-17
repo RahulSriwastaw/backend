@@ -65,7 +65,19 @@ export const connectDB = async (retries = 3, delay = 5000) => {
 
       return conn;
     } catch (error) {
-      console.error(`❌ MongoDB connection attempt ${i + 1} failed:`, error.message);
+      const errorMsg = error.message || 'Unknown error';
+      console.error(`❌ MongoDB connection attempt ${i + 1} failed:`, errorMsg);
+      
+      // Provide specific error messages
+      if (errorMsg.includes('bad auth') || errorMsg.includes('Authentication failed')) {
+        console.error('🔐 Authentication Error:');
+        console.error('   - Check MongoDB username and password in MONGODB_URI');
+        console.error('   - Verify database user exists in MongoDB Atlas → Database Access');
+        console.error('   - Update Railway environment variable MONGODB_URI with correct credentials');
+      } else if (errorMsg.includes('IP') || errorMsg.includes('whitelist')) {
+        console.error('🌐 IP Whitelist Error:');
+        console.error('   - Add 0.0.0.0/0 in MongoDB Atlas → Network Access');
+      }
       
       if (i < retries - 1) {
         console.log(`⏳ Retrying in ${delay / 1000} seconds...`);
@@ -74,8 +86,9 @@ export const connectDB = async (retries = 3, delay = 5000) => {
         console.error('❌ All MongoDB connection attempts failed');
         console.error('💡 Please check:');
         console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
-        console.error('   2. MongoDB connection string in .env file (MONGODB_URI)');
-        console.error('   3. Internet connection');
+        console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
+        console.error('   3. Database user credentials (username/password)');
+        console.error('   4. Internet connection');
         isConnected = false;
         return null;
       }
