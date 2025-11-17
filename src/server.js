@@ -9,6 +9,10 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+
+dotenv.config();
+
+// Import all modules - if any fail, server will crash during import (which is fine - we want to know)
 import connectDB from './config/database.js';
 import paymentRoutes from './routes/payment.js';
 import templateRoutes from './routes/templates.js';
@@ -17,8 +21,6 @@ import authRoutes from './routes/auth.js';
 import walletRoutes from './routes/wallet.js';
 import creatorRoutes from './routes/creator.js';
 import adminRoutes from './routes/admin.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -167,14 +169,18 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB (non-blocking - server will start even if MongoDB fails)
-connectDB().catch((err) => {
-  console.error('⚠️  Failed to connect to MongoDB:', err.message);
-  console.error('⚠️  Server will continue but database operations may fail.');
-  console.error('⚠️  Please check:');
-  console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
-  console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
-  console.error('   3. Internet connection');
-});
+if (connectDB) {
+  connectDB().catch((err) => {
+    console.error('⚠️  Failed to connect to MongoDB:', err.message);
+    console.error('⚠️  Server will continue but database operations may fail.');
+    console.error('⚠️  Please check:');
+    console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
+    console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
+    console.error('   3. Internet connection');
+  });
+} else {
+  console.warn('⚠️  Database connection module not loaded - MongoDB operations will fail');
+}
 
 // Process error handlers - prevent server crashes
 process.on('uncaughtException', (error) => {
