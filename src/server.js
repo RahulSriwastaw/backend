@@ -30,9 +30,7 @@ connectDB().catch((err) => {
 const corsOptions = {
   origin: process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',')
-    : process.env.NODE_ENV === 'production' 
-      ? [] // In production, require CORS_ORIGIN to be set
-      : true, // In development, allow all origins
+    : true, // Allow all origins if CORS_ORIGIN not set (for development and quick setup)
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -86,8 +84,9 @@ app.get('/api/test-connections', async (req, res) => {
   }
 });
 
+// Root route for Railway health check
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Backend root' });
+  res.send('Backend is running successfully!');
 });
 
 // Debug: List all registered routes (development only)
