@@ -40,13 +40,23 @@ app.get('/', (req, res) => {
 
 // Health check endpoint (fast response for Railway)
 app.get('/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  res.json({ 
-    status: 'ok', 
-    message: 'Backend is running', 
-    database: dbStatus,
-    timestamp: new Date().toISOString() 
-  });
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({ 
+      status: 'ok', 
+      message: 'Backend is running', 
+      database: dbStatus,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Health check failed',
+      error: error.message 
+    });
+  }
 });
 
 // Connection test endpoint
@@ -108,20 +118,37 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// API Routes - Mount all routes with /api prefix
+// API Routes - Mount all routes with /api prefix (with individual error handling)
+const mountRoute = (path, route, name) => {
+  try {
+    if (route) {
+      app.use(path, route);
+      console.log(`✅ Route mounted: ${path}`);
+      return true;
+    } else {
+      console.warn(`⚠️  Route not available: ${name}`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`❌ Error mounting route ${path}:`, error.message);
+    console.error('Stack:', error.stack);
+    return false;
+  }
+};
+
 try {
-  app.use('/api/auth', authRoutes);
-  app.use('/api/payment', paymentRoutes);
-  app.use('/api/templates', templateRoutes);
-  app.use('/api/generation', generationRoutes);
-  app.use('/api/wallet', walletRoutes);
-  app.use('/api/creator', creatorRoutes);
-  app.use('/api/admin', adminRoutes);
-  console.log('✅ All API routes mounted successfully');
+  mountRoute('/api/auth', authRoutes, 'authRoutes');
+  mountRoute('/api/payment', paymentRoutes, 'paymentRoutes');
+  mountRoute('/api/templates', templateRoutes, 'templateRoutes');
+  mountRoute('/api/generation', generationRoutes, 'generationRoutes');
+  mountRoute('/api/wallet', walletRoutes, 'walletRoutes');
+  mountRoute('/api/creator', creatorRoutes, 'creatorRoutes');
+  mountRoute('/api/admin', adminRoutes, 'adminRoutes');
+  console.log('✅ Route mounting completed');
 } catch (error) {
-  console.error('❌ Error mounting routes:', error.message);
+  console.error('❌ Error during route mounting:', error.message);
   console.error('Stack:', error.stack);
-  // Server will still start, but routes won't work
+  // Server will still start, but some routes may not work
 }
 
 // 404 handler
@@ -149,8 +176,42 @@ connectDB().catch((err) => {
   console.error('   3. Internet connection');
 });
 
+// Process error handlers - prevent server crashes
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+  // Don't exit - let server continue running
+  console.warn('⚠️  Server will continue running despite uncaught exception');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  // Don't exit - let server continue running
+  console.warn('⚠️  Server will continue running despite unhandled rejection');
+});
+
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server Running on port ${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✅ Server listening on http://0.0.0.0:${PORT}`);
+  console.log(`✅ Health check available at: http://0.0.0.0:${PORT}/health`);
+});
+
+// Keep server alive - handle errors gracefully
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`⚠️  Port ${PORT} is already in use`);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
