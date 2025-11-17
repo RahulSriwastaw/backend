@@ -11,7 +11,29 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Use MONGODB_URI from environment, fallback to default
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb+srv://rupantranai_db_user:auC2C5rXl4nNleWd@cluster0.skr2l3f.mongodb.net/rupantar_ai?retryWrites=true&w=majority&appName=Cluster0';
+let MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+// Validate connection string format
+if (!MONGODB_URI) {
+  console.error('❌ MONGODB_URI environment variable is not set!');
+  console.error('💡 Please set MONGODB_URI in Railway Dashboard → Variables');
+  console.error('💡 Format: mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority');
+  // Use fallback for development
+  MONGODB_URI = 'mongodb+srv://rupantranai_db_user:auC2C5rXl4nNleWd@cluster0.skr2l3f.mongodb.net/rupantar_ai?retryWrites=true&w=majority&appName=Cluster0';
+  console.warn('⚠️  Using fallback connection string (may not work in production)');
+} else {
+  // Trim whitespace
+  MONGODB_URI = MONGODB_URI.trim();
+  
+  // Validate format
+  if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
+    console.error('❌ Invalid MONGODB_URI format!');
+    console.error('💡 Connection string must start with "mongodb://" or "mongodb+srv://"');
+    console.error('💡 Current value:', MONGODB_URI.substring(0, 50) + '...');
+    console.error('💡 Please check Railway Dashboard → Variables → MONGODB_URI');
+    throw new Error('Invalid MongoDB connection string format');
+  }
+}
 
 let isConnected = false;
 
@@ -69,7 +91,13 @@ export const connectDB = async (retries = 3, delay = 5000) => {
       console.error(`❌ MongoDB connection attempt ${i + 1} failed:`, errorMsg);
       
       // Provide specific error messages
-      if (errorMsg.includes('bad auth') || errorMsg.includes('Authentication failed')) {
+      if (errorMsg.includes('Invalid scheme') || errorMsg.includes('expected connection string')) {
+        console.error('🔗 Connection String Format Error:');
+        console.error('   - MONGODB_URI must start with "mongodb://" or "mongodb+srv://"');
+        console.error('   - Check Railway Dashboard → Variables → MONGODB_URI');
+        console.error('   - Make sure there are no extra spaces or characters');
+        console.error('   - Format: mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority');
+      } else if (errorMsg.includes('bad auth') || errorMsg.includes('Authentication failed')) {
         console.error('🔐 Authentication Error:');
         console.error('   - Check MongoDB username and password in MONGODB_URI');
         console.error('   - Verify database user exists in MongoDB Atlas → Database Access');
