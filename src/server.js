@@ -197,13 +197,25 @@ process.on('unhandledRejection', (reason, promise) => {
   console.warn('⚠️  Server will continue running despite unhandled rejection');
 });
 
-// Start server
+// Start server - ensure it stays alive
+console.log(`🚀 Starting server on port ${PORT}...`);
+console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`🌐 PORT from env: ${process.env.PORT || 'not set (using default 8080)'}`);
+
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server Running on port ${PORT}`);
+  const address = server.address();
+  console.log(`✅ Server Running successfully!`);
+  console.log(`✅ Port: ${PORT}`);
+  console.log(`✅ Address: ${address ? `${address.address}:${address.port}` : 'unknown'}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`✅ Server listening on http://0.0.0.0:${PORT}`);
-  console.log(`✅ Health check available at: http://0.0.0.0:${PORT}/health`);
+  console.log(`✅ Health check: http://0.0.0.0:${PORT}/health`);
+  console.log(`✅ Root endpoint: http://0.0.0.0:${PORT}/`);
+  console.log(`✅ Server is ready to accept connections`);
 });
+
+// Ensure server stays alive
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 // Keep server alive - handle errors gracefully
 server.on('error', (error) => {
