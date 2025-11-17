@@ -26,13 +26,14 @@ if (!MONGODB_URI) {
   // Trim whitespace
   MONGODB_URI = MONGODB_URI.trim();
   
-  // Validate format
+  // Validate format (don't throw - just warn, let connection attempt fail gracefully)
   if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
     console.error('❌ Invalid MONGODB_URI format!');
     console.error('💡 Connection string must start with "mongodb://" or "mongodb+srv://"');
     console.error('💡 Current value:', MONGODB_URI.substring(0, 50) + '...');
     console.error('💡 Please check Railway Dashboard → Variables → MONGODB_URI');
-    throw new Error('Invalid MongoDB connection string format');
+    console.warn('⚠️  Server will start but MongoDB connection will fail');
+    // Don't throw - let server start, connection will fail gracefully
   }
 }
 

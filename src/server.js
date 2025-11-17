@@ -109,13 +109,20 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // API Routes - Mount all routes with /api prefix
-app.use('/api/auth', authRoutes);
-app.use('/api/payment', paymentRoutes);
-app.use('/api/templates', templateRoutes);
-app.use('/api/generation', generationRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/creator', creatorRoutes);
-app.use('/api/admin', adminRoutes);
+try {
+  app.use('/api/auth', authRoutes);
+  app.use('/api/payment', paymentRoutes);
+  app.use('/api/templates', templateRoutes);
+  app.use('/api/generation', generationRoutes);
+  app.use('/api/wallet', walletRoutes);
+  app.use('/api/creator', creatorRoutes);
+  app.use('/api/admin', adminRoutes);
+  console.log('✅ All API routes mounted successfully');
+} catch (error) {
+  console.error('❌ Error mounting routes:', error.message);
+  console.error('Stack:', error.stack);
+  // Server will still start, but routes won't work
+}
 
 // 404 handler
 app.use((req, res) => {
@@ -138,7 +145,7 @@ connectDB().catch((err) => {
   console.error('⚠️  Server will continue but database operations may fail.');
   console.error('⚠️  Please check:');
   console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
-  console.error('   2. MongoDB connection string in .env file');
+  console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
   console.error('   3. Internet connection');
 });
 
