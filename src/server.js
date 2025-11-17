@@ -1,3 +1,10 @@
+/**
+ * Rupantar AI Backend Server
+ * 
+ * IMPORTANT: You MUST whitelist 0.0.0.0/0 in MongoDB Atlas Network Access
+ * Go to: https://cloud.mongodb.com → Network Access → Add IP Address → Allow Access from Anywhere
+ */
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -14,28 +21,15 @@ import adminRoutes from './routes/admin.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || process.env.BACKEND_PORT || 4000;
+const PORT = process.env.PORT || 8080;
 
-// Connect to MongoDB (non-blocking - server will start even if MongoDB fails)
-connectDB().catch((err) => {
-  console.error('⚠️  Failed to connect to MongoDB:', err.message);
-  console.error('⚠️  Server will continue but database operations may fail.');
-  console.error('⚠️  Please check:');
-  console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
-  console.error('   2. MongoDB connection string in .env file');
-  console.error('   3. Internet connection');
-});
-
-// CORS configuration
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',')
-    : true, // Allow all origins if CORS_ORIGIN not set (for development and quick setup)
+// CORS - Allow all origins for development and Vercel deployments
+app.use(cors({ 
+  origin: true, 
   credentials: true,
   optionsSuccessStatus: 200
-};
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -89,7 +83,6 @@ app.get('/api/test-connections', async (req, res) => {
   }
 });
 
-
 // Debug: List all registered routes (development only)
 if (process.env.NODE_ENV === 'development') {
   app.get('/api/routes', (req, res) => {
@@ -115,7 +108,7 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-// API Routes
+// API Routes - Mount all routes with /api prefix
 app.use('/api/auth', authRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/templates', templateRoutes);
@@ -139,6 +132,18 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Connect to MongoDB (non-blocking - server will start even if MongoDB fails)
+connectDB().catch((err) => {
+  console.error('⚠️  Failed to connect to MongoDB:', err.message);
+  console.error('⚠️  Server will continue but database operations may fail.');
+  console.error('⚠️  Please check:');
+  console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
+  console.error('   2. MongoDB connection string in .env file');
+  console.error('   3. Internet connection');
+});
+
+// Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend server running on port ${PORT}`);
+  console.log(`✅ Server Running on port ${PORT}`);
+  console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
 });

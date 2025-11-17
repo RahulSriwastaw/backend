@@ -82,8 +82,8 @@ const creatorSchema = new mongoose.Schema({
 });
 
 // Indexes
-creatorSchema.index({ userId: 1 });
-creatorSchema.index({ username: 1 });
+// Note: userId and username already have indexes via unique: true
+// DO NOT add duplicate indexes for unique fields
 creatorSchema.index({ status: 1 });
 creatorSchema.index({ isVerified: 1 });
 

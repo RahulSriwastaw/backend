@@ -91,6 +91,7 @@ const userSchema = new mongoose.Schema({
 // Additional indexes
 // Note: userId, email, firebaseUid, username, and referralCode already have indexes via unique: true
 // Only add indexes for fields that don't have unique: true
+// DO NOT add indexes for fields that already have unique: true (causes duplicate index warnings)
 userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 userSchema.index({ createdAt: -1 }); // For sorting by creation date
