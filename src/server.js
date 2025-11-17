@@ -232,9 +232,10 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
-// Log when server receives requests
-server.on('request', (req, res, next) => {
-  console.log(`📥 Request: ${req.method} ${req.path}`);
+// Request logging middleware (moved before routes)
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
 });
 
 // Keep server alive - handle errors gracefully
