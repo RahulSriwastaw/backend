@@ -12,16 +12,6 @@ import mongoose from 'mongoose';
 
 dotenv.config();
 
-// Import all modules
-import connectDB from './config/database.js';
-import paymentRoutes from './routes/payment.js';
-import templateRoutes from './routes/templates.js';
-import generationRoutes from './routes/generation.js';
-import authRoutes from './routes/auth.js';
-import walletRoutes from './routes/wallet.js';
-import creatorRoutes from './routes/creator.js';
-import adminRoutes from './routes/admin.js';
-
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -40,14 +30,14 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Request logging middleware (BEFORE routes)
+// Request logging middleware
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.path} - ${new Date().toISOString()}`);
   next();
 });
 
 // ============================================
-// ROUTES (Mount BEFORE server starts)
+// BASIC ROUTES (Must work even if other routes fail)
 // ============================================
 
 // Root route for Railway health check (responds immediately)
@@ -111,21 +101,119 @@ app.get('/api/test-connections', async (req, res) => {
   }
 });
 
-// API Routes - Mount all routes with /api prefix
+// ============================================
+// IMPORT ROUTES (With error handling)
+// ============================================
+
+let connectDB = null;
+let paymentRoutes = null;
+let templateRoutes = null;
+let generationRoutes = null;
+let authRoutes = null;
+let walletRoutes = null;
+let creatorRoutes = null;
+let adminRoutes = null;
+
+// Import database connection
 try {
-  app.use('/api/auth', authRoutes);
-  app.use('/api/payment', paymentRoutes);
-  app.use('/api/templates', templateRoutes);
-  app.use('/api/generation', generationRoutes);
-  app.use('/api/wallet', walletRoutes);
-  app.use('/api/creator', creatorRoutes);
-  app.use('/api/admin', adminRoutes);
-  console.log('✅ All API routes mounted successfully');
+  const dbModule = await import('./config/database.js');
+  connectDB = dbModule.default;
+  console.log('✅ Database module loaded');
 } catch (error) {
-  console.error('❌ Error mounting routes:', error.message);
-  console.error('Stack:', error.stack);
-  // Server will still start, but some routes may not work
+  console.error('❌ Failed to import database module:', error.message);
 }
+
+// Import routes with individual error handling
+try {
+  const module = await import('./routes/payment.js');
+  paymentRoutes = module.default;
+  console.log('✅ Payment routes loaded');
+} catch (error) {
+  console.error('❌ Failed to import payment routes:', error.message);
+}
+
+try {
+  const module = await import('./routes/templates.js');
+  templateRoutes = module.default;
+  console.log('✅ Template routes loaded');
+} catch (error) {
+  console.error('❌ Failed to import template routes:', error.message);
+}
+
+try {
+  const module = await import('./routes/generation.js');
+  generationRoutes = module.default;
+  console.log('✅ Generation routes loaded');
+} catch (error) {
+  console.error('❌ Failed to import generation routes:', error.message);
+}
+
+try {
+  const module = await import('./routes/auth.js');
+  authRoutes = module.default;
+  console.log('✅ Auth routes loaded');
+} catch (error) {
+  console.error('❌ Failed to import auth routes:', error.message);
+}
+
+try {
+  const module = await import('./routes/wallet.js');
+  walletRoutes = module.default;
+  console.log('✅ Wallet routes loaded');
+} catch (error) {
+  console.error('❌ Failed to import wallet routes:', error.message);
+}
+
+try {
+  const module = await import('./routes/creator.js');
+  creatorRoutes = module.default;
+  console.log('✅ Creator routes loaded');
+} catch (error) {
+  console.error('❌ Failed to import creator routes:', error.message);
+}
+
+try {
+  const module = await import('./routes/admin.js');
+  adminRoutes = module.default;
+  console.log('✅ Admin routes loaded');
+} catch (error) {
+  console.error('❌ Failed to import admin routes:', error.message);
+}
+
+// ============================================
+// MOUNT API ROUTES
+// ============================================
+
+if (authRoutes) {
+  app.use('/api/auth', authRoutes);
+  console.log('✅ Route mounted: /api/auth');
+}
+if (paymentRoutes) {
+  app.use('/api/payment', paymentRoutes);
+  console.log('✅ Route mounted: /api/payment');
+}
+if (templateRoutes) {
+  app.use('/api/templates', templateRoutes);
+  console.log('✅ Route mounted: /api/templates');
+}
+if (generationRoutes) {
+  app.use('/api/generation', generationRoutes);
+  console.log('✅ Route mounted: /api/generation');
+}
+if (walletRoutes) {
+  app.use('/api/wallet', walletRoutes);
+  console.log('✅ Route mounted: /api/wallet');
+}
+if (creatorRoutes) {
+  app.use('/api/creator', creatorRoutes);
+  console.log('✅ Route mounted: /api/creator');
+}
+if (adminRoutes) {
+  app.use('/api/admin', adminRoutes);
+  console.log('✅ Route mounted: /api/admin');
+}
+
+console.log('✅ Route mounting completed');
 
 // Debug: List all registered routes (development only)
 if (process.env.NODE_ENV === 'development') {
@@ -194,14 +282,18 @@ process.on('unhandledRejection', (reason, promise) => {
 // ============================================
 
 // Connect to MongoDB (non-blocking - server will start even if MongoDB fails)
-connectDB().catch((err) => {
-  console.error('⚠️  Failed to connect to MongoDB:', err.message);
-  console.error('⚠️  Server will continue but database operations may fail.');
-  console.error('⚠️  Please check:');
-  console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
-  console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
-  console.error('   3. Internet connection');
-});
+if (connectDB) {
+  connectDB().catch((err) => {
+    console.error('⚠️  Failed to connect to MongoDB:', err.message);
+    console.error('⚠️  Server will continue but database operations may fail.');
+    console.error('⚠️  Please check:');
+    console.error('   1. MongoDB Atlas IP whitelist (add 0.0.0.0/0 for all IPs)');
+    console.error('   2. MongoDB connection string in Railway variables (MONGODB_URI)');
+    console.error('   3. Internet connection');
+  });
+} else {
+  console.warn('⚠️  Database connection module not loaded - MongoDB operations will fail');
+}
 
 // ============================================
 // START SERVER
