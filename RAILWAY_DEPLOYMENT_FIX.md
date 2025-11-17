@@ -88,19 +88,19 @@ If you see errors, they won't crash the server anymore - it will continue runnin
 
 1. **Root Endpoint:**
    ```
-   https://backend-production-4dc2.up.railway.app/
+   https://new-backend-production-c886.up.railway.app/
    ```
    Should return: "Backend is running successfully!"
 
 2. **Health Endpoint:**
    ```
-   https://backend-production-4dc2.up.railway.app/health
+   https://new-backend-production-c886.up.railway.app/health
    ```
    Should return JSON with status, database, uptime, memory
 
 3. **API Endpoint:**
    ```
-   https://backend-production-4dc2.up.railway.app/api/test-connections
+   https://new-backend-production-c886.up.railway.app/api/test-connections
    ```
    Should return connection status
 

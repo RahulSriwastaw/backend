@@ -146,15 +146,15 @@ Attempting to connect to MongoDB (attempt 1/3)...
 
 After deployment, these should work:
 
-1. **Root:** `https://backend-production-4dc2.up.railway.app/`
+1. **Root:** `https://new-backend-production-c886.up.railway.app/`
    - Response: `"Backend is running successfully!"`
    - Status: `200 OK`
 
-2. **Health:** `https://backend-production-4dc2.up.railway.app/health`
+2. **Health:** `https://new-backend-production-c886.up.railway.app/health`
    - Response: `{"status":"ok","message":"Backend is running","database":"connected",...}`
    - Status: `200 OK`
 
-3. **API:** `https://backend-production-4dc2.up.railway.app/api`
+3. **API:** `https://new-backend-production-c886.up.railway.app/api`
    - Response: `{"message":"API is working","status":"ok",...}`
    - Status: `200 OK`
 

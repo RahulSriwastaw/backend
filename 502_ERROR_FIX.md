@@ -97,13 +97,13 @@ If you see these, server is working! ✅
 
 After server starts, test:
 
-1. **Root:** `https://backend-production-4dc2.up.railway.app/`
+1. **Root:** `https://new-backend-production-c886.up.railway.app/`
    - Should return: "Backend is running successfully!"
 
-2. **Health:** `https://backend-production-4dc2.up.railway.app/health`
+2. **Health:** `https://new-backend-production-c886.up.railway.app/health`
    - Should return JSON: `{"status":"ok","message":"Backend is running",...}`
 
-3. **Test Connections:** `https://backend-production-4dc2.up.railway.app/api/test-connections`
+3. **Test Connections:** `https://new-backend-production-c886.up.railway.app/api/test-connections`
    - Shows MongoDB, Cloudinary, Firebase status
 
 ---
